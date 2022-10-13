@@ -27,7 +27,7 @@ func WillGovernable_threshold() -> (res: felt) {
 }
 
 namespace WillGovernable {
-    // store governors public key
+    // - Initialize governors public key which will later be used for verifying signatures
     func initialize{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
         threshold: felt, governors_pk_len: felt, governors_pk: felt*
     ) {
@@ -39,6 +39,9 @@ namespace WillGovernable {
         return ();
     }
 
+    // - Will only pass if valid signatures >= threshold
+    // - This function runs in O(signatures_len * threshold)
+    // - Signature = sign(SIGN_MESSAGE)
     func verify_signatures{
         syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr, ec_op_ptr: EcOpBuiltin*
     }(signatures_len: felt, signatures: Signature*) {
