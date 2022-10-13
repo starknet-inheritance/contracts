@@ -95,7 +95,7 @@ func _verify_signatures_loop{
     if (signatures_len == 0) {
         // check that `valid_count` must be equal or bigger than threshold
         // else revert
-        with_attr error_SIGN_MESSAGE("WillGovernable: not enough valid signatures") {
+        with_attr error_message("WillGovernable: not enough valid signatures") {
             assert_le(threshold, valid_count);
         }
 
