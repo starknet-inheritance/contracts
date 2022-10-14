@@ -1,8 +1,10 @@
 %lang starknet
 
+from starkware.cairo.common.math import unsigned_div_rem
 from starkware.cairo.common.cairo_builtins import HashBuiltin, EcOpBuiltin
 from starkware.starknet.common.syscalls import get_caller_address
 
+from openzeppelin.token.erc20.IERC20 import IERC20
 from src.ownable import Ownable
 from src.will_governable import WillGovernable, Signature
 
@@ -15,7 +17,7 @@ struct InheritanceStatusEnum {
 struct Split {
     beneficiary: felt,
     token: felt,
-    amount: felt,
+    percentage: felt,
 }
 
 @storage_var
@@ -99,10 +101,65 @@ func claim_splits{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_pt
     alloc_locals;
 
     let (caller) = get_caller_address();
+    let (total) = _total_splits.read();
+    let (owner) = Ownable.get_owner();
 
-    // do token transfer token here
+    let (total_claimed) = _claim_splits_loop(
+        total_claimed=0,
+        split_count=total,
+        caller=caller,
+        owner=owner
+    );
 
     return ();
+}
+
+func _claim_splits_loop{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(total_claimed: felt, split_count: felt, caller: felt, owner: felt) -> (total_claimed: felt) {
+    if (total_splits == 0) {
+        return (total_claimed=total_claimed);
+    }
+
+    let (split: Split*) = _splits.read(split_count);
+
+    if (split.beneficiary == recipient) {
+        // 1. query owner's token balance
+        // 2. calculate amount based on split percentage
+        // 3. transfer amount to beneficiary 
+        
+        let (balance) = IERC20.balanceOf(
+            contract_address=split.token,
+            account=owner
+        );
+        
+        // issue : next split of the same token will calculate its percentage 
+        // based on `balance - amount`, which will result in wrong amount (less that expected).
+        // 
+        // as of now, the div remainder `r` should just be ignored to make things easier 
+        //
+        let nom = balance * split.percentage;
+        let (amount, r) = unsigned_div_rem(nom, 100);
+
+        let (success) = IERC20.transferFrom(
+            contract_address=split.token,
+            sender=owner,
+            recipient=split.beneficiary,
+            amount=amount
+        );
+
+        return _claim_splits_loop(
+            total_claimed=total_claimed + 1,
+            split_count=split_count - 1,
+            caller=caller,
+            owner=owner
+        );
+    } else {
+        return _claim_splits_loop(
+            total_claimed=total_claimed,
+            split_count=split_count - 1,
+            caller=caller,
+            owner=owner
+        );
+    }
 }
 
 //

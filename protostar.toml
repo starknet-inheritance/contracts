@@ -5,10 +5,9 @@ protostar_version = "0.5.0"
 libs_path = "lib"
 
 ["protostar.contracts"]
-Will = [
-    "src/will.cairo",
+main = [
+    "src/main.cairo",
 ]
 
-["profile.devnet.protostar.shared_command_configs"]
-gateway_url="http://localhost:5050"
-chain_id="1536727068981429685321"
+["protostar.build"]
+cairo-path = ["./lib/cairo_contracts/src"]
