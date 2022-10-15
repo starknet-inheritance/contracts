@@ -1,5 +1,6 @@
 %lang starknet
 
+from starkware.cairo.common.alloc import alloc
 from starkware.starknet.common.syscalls import get_caller_address
 from starkware.cairo.common.cairo_builtins import HashBuiltin, EcOpBuiltin
 from starkware.cairo.common.uint256 import Uint256, uint256_unsigned_div_rem, uint256_mul
@@ -124,12 +125,17 @@ func claim_splits{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_pt
 //
 
 @view
-func count_splits_of{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+func get_splits_id_of{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     address: felt
-) -> (res: felt) {
+) -> (res_len: felt, res: felt*) {
+    alloc_locals;
+    let (local res: felt*) = alloc();
+
     let (total_splits) = _total_splits.read();
-    let count = _count_splits_loop(total_splits, address, 0);
-    return (res=count);
+    let (res_len) = get_splits_id_of_address(
+        splits_count=0, splits_total=total_splits, address=address, found_len=0, found=res);
+
+    return (res_len, res);
 }
 
 @view
@@ -253,20 +259,22 @@ func _claim_splits_loop{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_ch
     }
 }
 
-func _count_splits_loop{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-    splits_count: felt, address: felt, total_found: felt
-) -> felt {
+func get_splits_id_of_address{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    splits_count: felt, splits_total: felt, address: felt, found_len: felt, found: felt*
+) -> (res_len: felt) {
     alloc_locals;
-
-    if (splits_count == 0) {
-        return total_found;
+    
+    if (splits_count == splits_total) {
+        return (res_len=found_len);
     }
 
-    let (splits) = _splits.read(splits_count);
+    let split_id = splits_count + 1;
+    let (split) = _splits.read(split_id);
 
-    if (splits.beneficiary == address) {
-        return _count_splits_loop(splits_count - 1, address, total_found + 1);
+    if (split.beneficiary == address) {
+        assert found[found_len] = split_id;
+        return get_splits_id_of_address(splits_count + 1, splits_total, address, found_len + 1, found);
     } else {
-        return _count_splits_loop(splits_count - 1, address, total_found);
+        return get_splits_id_of_address(splits_count + 1, splits_total, address, found_len, found);
     }
 }

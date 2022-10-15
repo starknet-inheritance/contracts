@@ -26,7 +26,7 @@ namespace Will {
     func stop_activation() {
     }
 
-    func count_splits_of(address: felt) -> (res: felt) {
+    func get_splits_id_of(address: felt) -> (res_len: felt, res: felt*) {
     }
 
     func get_activation_period() -> (res: felt) {
@@ -56,6 +56,11 @@ func __setup__{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
                         "beneficiary" : 999, 
                         "token": 12345, 
                         "percentage": 50,                        
+                    },
+                    {
+                        "beneficiary" : 666, 
+                        "token": 54321, 
+                        "percentage": 50,                        
                     }
                 ],
                 "threshold": 2,
@@ -77,7 +82,9 @@ func test_initialize_will{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_
     let (split_1) = Will.split_of(contract_address=contract_address, id=1);
     let (split_2) = Will.split_of(contract_address=contract_address, id=2);
 
-    assert total_splits = 2;
+    let (ids_len, ids) = Will.get_splits_id_of(contract_address=contract_address, address=666);
+
+    assert total_splits = 3;
     assert activation_period = 86400;
 
     assert split_1.beneficiary = 666;
@@ -89,6 +96,10 @@ func test_initialize_will{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_
     assert split_2.token = 12345;
     assert split_2.percentage = 50;
     assert split_2.expected_amount.low = 0;
+
+    assert ids_len = 2;
+    assert ids[0] = 1;
+    assert ids[1] = 3;
 
     return ();
 }
