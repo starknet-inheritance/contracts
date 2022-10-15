@@ -1,11 +1,13 @@
 %lang starknet
 
-from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.bool import TRUE
+from starkware.cairo.common.alloc import alloc
+from starkware.starknet.common.syscalls import get_block_number
 from starkware.cairo.common.cairo_builtins import HashBuiltin, SignatureBuiltin
 
 from src.will import Split
 from src.will_governable import Signature
+from src.will_activable import WillStatusEnum
 
 @contract_interface
 namespace Will {
@@ -21,7 +23,13 @@ namespace Will {
     func start_activation(signatures_len: felt, signatures: Signature*) {
     }
 
+    func stop_activation() {
+    }
+
     func count_splits_of(address: felt) -> (res: felt) {
+    }
+
+    func get_activation_period() -> (res: felt) {
     }
 }
 
@@ -37,11 +45,17 @@ func __setup__{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
             "src/will.cairo",
             {
                 "owner": 1701317860505462169960516548781836103369071457931845363635705241254217018862,
+                "activation_period": 86400,
                 "splits" : [
                     {   
                         "beneficiary" :666, 
                         "token": 12345, 
-                        "amount": 69
+                        "percentage": 50,                        
+                    },
+                    {
+                        "beneficiary" : 999, 
+                        "token": 12345, 
+                        "percentage": 50,                        
                     }
                 ],
                 "threshold": 2,
@@ -58,12 +72,23 @@ func test_initialize_will{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_
     let (contract_address) = test_contract_address.read();
 
     let (total_splits) = Will.total_splits(contract_address=contract_address);
-    let (split) = Will.split_of(contract_address=contract_address, id=1);
+    let (activation_period) = Will.get_activation_period(contract_address=contract_address);
 
-    assert total_splits = 1;
-    assert split.beneficiary = 666;
-    assert split.token = 12345;
-    assert split.amount = 69;
+    let (split_1) = Will.split_of(contract_address=contract_address, id=1);
+    let (split_2) = Will.split_of(contract_address=contract_address, id=2);
+
+    assert total_splits = 2;
+    assert activation_period = 86400;
+
+    assert split_1.beneficiary = 666;
+    assert split_1.token = 12345;
+    assert split_1.percentage = 50;
+    assert split_1.expected_amount.low = 0;
+
+    assert split_2.beneficiary = 999;
+    assert split_2.token = 12345;
+    assert split_2.percentage = 50;
+    assert split_2.expected_amount.low = 0;
 
     return ();
 }
@@ -75,13 +100,16 @@ func test_start_activation{
     alloc_locals;
 
     let (contract_address) = test_contract_address.read();
-
     let (sign: Signature*) = alloc();
 
     assert sign[0] = Signature(0x2b94ea0156794006a62fe1bda19e6c32083499d8d13c3a605abc1a5288d6dfe, 0x37116782c568c5cc7a5da13425395a8a17c0ca6babd0b3970637bb7c1113a9f);
     assert sign[1] = Signature(0x64df89530d2cb4a2377c6cff689da1dd54b72d325be44a3ef814f179aa34bde, 0x4c3deeae07ad308b84722340e9878460350c12b517c0087953ae8fe7bfcf6d5);
 
     Will.start_activation(contract_address=contract_address, signatures_len=2, signatures=sign);
+
+    let (status) = Will.inheritance_status(contract_address);
+
+    assert status = WillStatusEnum.active;
 
     return ();
 }
@@ -94,13 +122,69 @@ func test_fail_start_activation_not_enough_signatures{
     alloc_locals;
 
     let (contract_address) = test_contract_address.read();
-
     let (sign: Signature*) = alloc();
 
     assert sign[0] = Signature(0x2b94ea0156794006a62fe1bda19e6c32083499d8d13c3a605abc1a5288d6dfe, 0x37116782c568c5cc7a5da13425395a8a17c0ca6babd0b3970637bb7c1113a9f);
 
     %{ expect_revert(error_message="WillGovernable: not enough valid signatures") %}
     Will.start_activation(contract_address=contract_address, signatures_len=1, signatures=sign);
+
+    return ();
+}
+
+@external
+func test_stop_activation{
+    syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr, ecdsa_ptr: SignatureBuiltin*
+}() {
+    let owner = 0x3c2e96ab980302de2ac92e5da2c643badc4d75d363278bf531aa0c06d7a6dee;
+
+    alloc_locals;
+    let (local contract_address) = test_contract_address.read();
+
+    test_start_activation();
+
+    %{ stop_prank = start_prank(ids.owner, ids.contract_address) %}
+
+    Will.stop_activation(contract_address);
+
+    %{ stop_prank() %}
+
+    let (status) = Will.inheritance_status(contract_address);
+
+    assert status = WillStatusEnum.inactive;
+
+    return ();
+}
+
+@external
+func test_fail_stop_activation_after_activation_period{
+    syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr, ecdsa_ptr: SignatureBuiltin*
+}() {
+    let owner = 0x3c2e96ab980302de2ac92e5da2c643badc4d75d363278bf531aa0c06d7a6dee;
+
+    alloc_locals;
+    let (local contract_address) = test_contract_address.read();
+    let (local block_number) = get_block_number();
+
+    test_start_activation();
+
+    %{
+        stop_prank = start_prank(ids.owner, ids.contract_address)
+        stop_warp = warp(ids.block_number + (86400 * 2), ids.contract_address)
+
+        expect_revert(error_message="WillActivable: already past the activation period")
+    %}
+
+    Will.stop_activation(contract_address);
+
+    %{
+        stop_prank()
+        stop_warp()
+    %}
+
+    let (status) = Will.inheritance_status(contract_address);
+
+    assert status = WillStatusEnum.inactive;
 
     return ();
 }
