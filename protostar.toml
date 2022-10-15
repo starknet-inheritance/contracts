@@ -5,9 +5,9 @@ protostar_version = "0.5.0"
 libs_path = "lib"
 
 ["protostar.contracts"]
-main = [
-    "src/main.cairo",
+will = [
+    "src/will.cairo",
 ]
 
-["protostar.build"]
-cairo-path = ["./lib/cairo_contracts/src"]
+["protostar.shared_command_configs"]
+cairo-path = ["./lib/cairo_contracts/src", "./lib/argent_contracts_starknet/contracts"]
