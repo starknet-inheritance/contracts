@@ -1,7 +1,9 @@
 %lang starknet
 
 from starkware.cairo.common.alloc import alloc
+from starkware.cairo.common.bool import TRUE, FALSE
 from starkware.starknet.common.syscalls import get_caller_address
+from starkware.cairo.common.math import assert_le, assert_not_zero
 from starkware.cairo.common.cairo_builtins import HashBuiltin, EcOpBuiltin
 from starkware.cairo.common.uint256 import Uint256, uint256_unsigned_div_rem, uint256_mul
 
@@ -96,28 +98,45 @@ func stop_activation{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check
     return ();
 }
 
-// - This function should allow caller to claim all splits that satisfies `caller == split.beneficiary`
-// - Should initiate token transfer directly to beneficiary address
 @external
-func claim_splits{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (
-    total_claimed: felt
-) {
+func claim_split{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(id: felt) {
     alloc_locals;
 
-    with_attr error_message("Will: cannot claim because will is not activated yet") {
-        let (status) = WillActivable.status();
-        assert status = WillStatusEnum.active;
+    with_attr error_message("Will: will is not yet activated") {
+        let is_active = WillActivable.is_active();
+        assert is_active = TRUE;
+    }
+
+    with_attr error_message("Will: split id `{id}` does not exist") {
+        let (total) = _total_splits.read();
+        assert_not_zero(id);
+        assert_le(id, total);
+    }
+
+    let (split: Split) = _splits.read(id);
+
+    with_attr error_message("Will: split id `{id}` does not belong to caller") {
+        let (caller) = get_caller_address();
+        assert caller = split.beneficiary;
+    }
+
+    with_attr error_message("Will: split is already claimed") {
+        let (is_claimed) = _is_claimed.read(id);
+        assert is_claimed = FALSE;
     }
 
     let (owner) = Ownable.get_owner();
-    let (total) = _total_splits.read();
-    let (caller) = get_caller_address();
 
-    let (total_claimed) = _claim_splits_loop(
-        total_claimed=0, split_count=total, caller=caller, owner=owner
+    let (success) = IERC20.transferFrom(
+        contract_address=split.token,
+        sender=owner,
+        recipient=split.beneficiary,
+        amount=split.expected_amount,
     );
 
-    return (total_claimed=total_claimed);
+    _is_claimed.write(id, TRUE);
+
+    return ();
 }
 
 //
@@ -133,7 +152,8 @@ func get_splits_id_of{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_chec
 
     let (total_splits) = _total_splits.read();
     let (res_len) = get_splits_id_of_address(
-        splits_count=0, splits_total=total_splits, address=address, found_len=0, found=res);
+        splits_count=0, splits_total=total_splits, address=address, found_len=0, found=res
+    );
 
     return (res_len, res);
 }
@@ -230,40 +250,11 @@ func calculate_splits_amount{
     return calculate_splits_amount(splits_count - 1);
 }
 
-func _claim_splits_loop{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-    total_claimed: felt, split_count: felt, caller: felt, owner: felt
-) -> (total_claimed: felt) {
-    alloc_locals;
-
-    if (split_count == 0) {
-        return (total_claimed=total_claimed);
-    }
-
-    let (local split: Split) = _splits.read(split_count);
-
-    if (split.beneficiary == caller) {
-        let (success) = IERC20.transferFrom(
-            contract_address=split.token,
-            sender=owner,
-            recipient=split.beneficiary,
-            amount=split.expected_amount,
-        );
-
-        return _claim_splits_loop(
-            total_claimed=total_claimed + 1, split_count=split_count - 1, caller=caller, owner=owner
-        );
-    } else {
-        return _claim_splits_loop(
-            total_claimed=total_claimed, split_count=split_count - 1, caller=caller, owner=owner
-        );
-    }
-}
-
 func get_splits_id_of_address{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     splits_count: felt, splits_total: felt, address: felt, found_len: felt, found: felt*
 ) -> (res_len: felt) {
     alloc_locals;
-    
+
     if (splits_count == splits_total) {
         return (res_len=found_len);
     }
@@ -273,7 +264,9 @@ func get_splits_id_of_address{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, ra
 
     if (split.beneficiary == address) {
         assert found[found_len] = split_id;
-        return get_splits_id_of_address(splits_count + 1, splits_total, address, found_len + 1, found);
+        return get_splits_id_of_address(
+            splits_count + 1, splits_total, address, found_len + 1, found
+        );
     } else {
         return get_splits_id_of_address(splits_count + 1, splits_total, address, found_len, found);
     }
