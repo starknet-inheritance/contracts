@@ -1,7 +1,8 @@
 %lang starknet
 
-from starkware.cairo.common.bool import TRUE
 from starkware.cairo.common.math import assert_nn
+from starkware.cairo.common.math_cmp import is_nn
+from starkware.cairo.common.bool import TRUE, FALSE
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.starknet.common.syscalls import get_block_timestamp
 
@@ -9,6 +10,7 @@ from src.will_governable import WillGovernable, Signature
 
 struct WillStatusEnum {
     inactive: felt,
+    pending: felt,
     active: felt,
 }
 
@@ -35,7 +37,7 @@ namespace WillActivable {
 
         let (current_timestamp) = get_block_timestamp();
 
-        WillActivable_status.write(WillStatusEnum.active);
+        WillActivable_status.write(WillStatusEnum.pending);
         WillActivable_activated_on.write(current_timestamp);
 
         return (success=TRUE);
@@ -46,21 +48,34 @@ namespace WillActivable {
     ) {
         with_attr error_message("WillActivable: activation process is not ongoing") {
             let (status) = WillActivable_status.read();
-            assert status = WillStatusEnum.active;
+            assert status = WillStatusEnum.pending;
         }
 
         with_attr error_message("WillActivable: already past the activation period") {
+            let (limit) = calculate_activation_period_limit();
             let (current_timestamp) = get_block_timestamp();
-            let (activated_on) = WillActivable_activated_on.read();
-            let (activation_period) = WillActivable_activation_period.read();
-
-            let window = activated_on + activation_period;
-
-            assert_nn(window - current_timestamp);
+            assert_nn(limit - current_timestamp);
         }
 
+        WillActivable_activated_on.write(0);
         WillActivable_status.write(WillStatusEnum.inactive);
         return (success=TRUE);
+    }
+
+    func is_active{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> felt {
+        alloc_locals;
+        let (status) = WillActivable_status.read();
+
+        if (status == WillStatusEnum.inactive) {
+            return FALSE;
+        }
+
+        let (limit) = calculate_activation_period_limit();
+
+        let (current_timestamp) = get_block_timestamp();
+        let res = is_nn(current_timestamp - limit);
+
+        return res;
     }
 
     func set_activation_period{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
@@ -79,4 +94,13 @@ namespace WillActivable {
     func status{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (res: felt) {
         return WillActivable_status.read();
     }
+}
+
+func calculate_activation_period_limit{
+    syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
+}() -> (res: felt) {
+    let (activated_on) = WillActivable_activated_on.read();
+    let (activation_period) = WillActivable_activation_period.read();
+    let limit = activated_on + activation_period;
+    return (res=limit);
 }
