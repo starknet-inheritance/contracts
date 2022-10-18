@@ -2,15 +2,21 @@
 
 from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.bool import TRUE, FALSE
-from starkware.starknet.common.syscalls import get_caller_address
-from starkware.cairo.common.math import assert_le, assert_not_zero
 from starkware.cairo.common.cairo_builtins import HashBuiltin, EcOpBuiltin
+from starkware.cairo.common.math import assert_le, assert_not_zero, assert_lt
+from starkware.starknet.common.syscalls import get_caller_address, get_block_timestamp
 from starkware.cairo.common.uint256 import Uint256, uint256_unsigned_div_rem, uint256_mul
 
 from src.ownable import Ownable
 from openzeppelin.token.erc20.IERC20 import IERC20
 from src.will_governable import WillGovernable, Signature
 from src.will_activable import WillActivable, WillStatusEnum
+
+@contract_interface
+namespace ArgentAccountExtended {
+    func getLatestTxTimestamp() -> (timestamp: felt) {
+    }
+}
 
 struct UninitializedSplit {
     beneficiary: felt,
@@ -82,6 +88,17 @@ func constructor{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
 func start_activation{
     syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr, ec_op_ptr: EcOpBuiltin*
 }(signatures_len: felt, signatures: Signature*) {
+    with_attr error_message("Will: owner must be inactive for 7 days to activate") {
+        let (owner) = Ownable.get_owner();
+        let (current_timestamp) = get_block_timestamp();
+        let (latest_tx_timestamp) = ArgentAccountExtended.getLatestTxTimestamp(
+            contract_address=owner
+        );
+
+        // 7 days in seconds = 7 * 86400 seconds
+        assert_lt(latest_tx_timestamp, current_timestamp - (7 * 86400));
+    }
+
     WillGovernable.verify_signatures(signatures_len, signatures);
     WillActivable.start_activation();
 

@@ -11,6 +11,9 @@ will = [
 will_factory = [
     "src/will_factory.cairo"
 ]
+argent_account_extended = [
+    "src/account/argent_account_extended.cairo"
+]
 
 ["protostar.shared_command_configs"]
 cairo-path = ["./lib/cairo_contracts/src", "./lib/argent_contracts_starknet/contracts"]
