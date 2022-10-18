@@ -37,7 +37,7 @@ func create_will{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
     splits: UninitializedSplit*,
     governors_pk_len: felt,
     governors_pk: felt*,
-) {
+) -> (will_contract_address: felt) {
     let (current_salt) = salt.read();
     let (caller) = get_caller_address();
     let (class_hash) = will_class_hash.read();
@@ -64,5 +64,5 @@ func create_will{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
 
     will_creation.emit(contract_address=contract_address, owner=caller);
 
-    return ();
+    return (will_contract_address=contract_address);
 }
