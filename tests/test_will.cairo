@@ -11,6 +11,8 @@ from src.will_governable import Signature
 from src.will_activable import WillStatusEnum
 from openzeppelin.token.erc20.IERC20 import IERC20
 
+const last_tx = 172800;
+
 @contract_interface
 namespace Will {
     func claim_split(id: felt) {
@@ -38,6 +40,12 @@ namespace Will {
     }
 }
 
+@contract_interface
+namespace Account {
+    func getLatestTxTimestamp() -> (timestamp: felt) {
+    }
+}
+
 @storage_var
 func will_contract_address() -> (res: felt) {
 }
@@ -60,6 +68,8 @@ func __deploy_mock_erc20s__{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, rang
     local _token1;
     local _token2;
 
+    let (owner) = will_owner.read();
+
     %{
         ids._token1 = deploy_contract("lib/cairo_contracts/src/openzeppelin/token/erc20/presets/ERC20.cairo",
             {
@@ -70,7 +80,7 @@ func __deploy_mock_erc20s__{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, rang
                     "low" : 1000000000,
                     "high" : 0
                 },
-                "recipient" : 1701317860505462169960516548781836103369071457931845363635705241254217018862
+                "recipient" : ids.owner
             }
         ).contract_address;
 
@@ -83,7 +93,7 @@ func __deploy_mock_erc20s__{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, rang
                     "low" : 1000000000,
                     "high" : 0
                 },
-                "recipient" : 1701317860505462169960516548781836103369071457931845363635705241254217018862
+                "recipient" : ids.owner
             }
         ).contract_address;
     %}
@@ -94,13 +104,31 @@ func __deploy_mock_erc20s__{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, rang
     return ();
 }
 
+func __deploy_account__{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (
+    address: felt
+) {
+    tempvar account;
+
+    %{
+        ids.account = deploy_contract("src/account/argent_account_extended.cairo").contract_address
+        store(ids.account, "latest_tx_timestamp", [ids.last_tx])
+    %}
+
+    let (timestamp) = Account.getLatestTxTimestamp(contract_address=account);
+
+    assert timestamp = last_tx;
+
+    return (address=account);
+}
+
 @external
 func __setup__{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
     alloc_locals;
 
-    __deploy_mock_erc20s__();
+    let (owner) = __deploy_account__();
+    will_owner.write(owner);
 
-    let owner = 1701317860505462169960516548781836103369071457931845363635705241254217018862;
+    __deploy_mock_erc20s__();
 
     local will_address;
 
@@ -150,7 +178,6 @@ func __setup__{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     %}
 
     will_contract_address.write(will_address);
-    will_owner.write(owner);
 
     return ();
 }
@@ -220,7 +247,41 @@ func test_start_activation{
     assert sign[0] = Signature(0x2b94ea0156794006a62fe1bda19e6c32083499d8d13c3a605abc1a5288d6dfe, 0x37116782c568c5cc7a5da13425395a8a17c0ca6babd0b3970637bb7c1113a9f);
     assert sign[1] = Signature(0x64df89530d2cb4a2377c6cff689da1dd54b72d325be44a3ef814f179aa34bde, 0x4c3deeae07ad308b84722340e9878460350c12b517c0087953ae8fe7bfcf6d5);
 
-    %{ stop_warp = warp(123456789, ids.contract_address) %}
+    // 7 day (+ 1 second) after owner's last transaction time
+    let new_time = last_tx + (86400 * 7 + 1);
+
+    %{ stop_warp = warp(ids.new_time, ids.contract_address) %}
+
+    Will.start_activation(contract_address=contract_address, signatures_len=2, signatures=sign);
+
+    %{ stop_warp() %}
+
+    let (status) = Will.inheritance_status(contract_address);
+
+    assert status = WillStatusEnum.pending;
+
+    return ();
+}
+
+@external
+func test_fail_start_activation_owner_not_inactive{
+    syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr, ecdsa_ptr: SignatureBuiltin*
+}() {
+    alloc_locals;
+
+    let (contract_address) = will_contract_address.read();
+    let (sign: Signature*) = alloc();
+
+    assert sign[0] = Signature(0x2b94ea0156794006a62fe1bda19e6c32083499d8d13c3a605abc1a5288d6dfe, 0x37116782c568c5cc7a5da13425395a8a17c0ca6babd0b3970637bb7c1113a9f);
+    assert sign[1] = Signature(0x64df89530d2cb4a2377c6cff689da1dd54b72d325be44a3ef814f179aa34bde, 0x4c3deeae07ad308b84722340e9878460350c12b517c0087953ae8fe7bfcf6d5);
+
+    // 2 days after owner's last tx happened
+    let new_time = last_tx + (86400 * 2);
+
+    %{
+        stop_warp = warp(ids.new_time, ids.contract_address) 
+        expect_revert(error_message="Will: owner must be inactive for 7 days to activate")
+    %}
 
     Will.start_activation(contract_address=contract_address, signatures_len=2, signatures=sign);
 
@@ -245,8 +306,17 @@ func test_fail_start_activation_not_enough_signatures{
 
     assert sign[0] = Signature(0x2b94ea0156794006a62fe1bda19e6c32083499d8d13c3a605abc1a5288d6dfe, 0x37116782c568c5cc7a5da13425395a8a17c0ca6babd0b3970637bb7c1113a9f);
 
-    %{ expect_revert(error_message="WillGovernable: not enough valid signatures") %}
+    // 7 day (+ 1 second) after owner's last transaction time
+    let new_time = last_tx + (86400 * 7 + 1);
+
+    %{
+        stop_warp = warp(ids.new_time, ids.contract_address) 
+        expect_revert(error_message="WillGovernable: not enough valid signatures")
+    %}
+
     Will.start_activation(contract_address=contract_address, signatures_len=1, signatures=sign);
+
+    %{ stop_warp() %}
 
     return ();
 }
@@ -255,10 +325,10 @@ func test_fail_start_activation_not_enough_signatures{
 func test_stop_activation{
     syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr, ecdsa_ptr: SignatureBuiltin*
 }() {
-    let owner = 0x3c2e96ab980302de2ac92e5da2c643badc4d75d363278bf531aa0c06d7a6dee;
-
     alloc_locals;
+
     let (local contract_address) = will_contract_address.read();
+    let (local owner) = will_owner.read();
 
     test_start_activation();
 
@@ -279,10 +349,10 @@ func test_stop_activation{
 func test_fail_stop_activation_after_activation_period{
     syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr, ecdsa_ptr: SignatureBuiltin*
 }() {
-    let owner = 0x3c2e96ab980302de2ac92e5da2c643badc4d75d363278bf531aa0c06d7a6dee;
-
     alloc_locals;
+
     let (local contract_address) = will_contract_address.read();
+    let (local owner) = will_owner.read();
 
     test_start_activation();
 
@@ -316,9 +386,13 @@ func test_claim_split{
 
     test_start_activation();
 
+    let (local period) = Will.get_activation_period(contract_address=contract_address);
+
+    let new_time = last_tx + (86400 * 7 + 1) + (period + 1);
+
     %{
         stop_prank = start_prank(666, ids.contract_address)
-        stop_warp = warp(123456789 + (86400 + 1), ids.contract_address)
+        stop_warp = warp(ids.new_time + 1, ids.contract_address)
     %}
 
     Will.claim_split(contract_address=contract_address, id=1);
@@ -337,12 +411,15 @@ func test_fail_claim_split_when_will_inactive{
 }() {
     alloc_locals;
     let (local contract_address) = will_contract_address.read();
+    let (local period) = Will.get_activation_period(contract_address=contract_address);
 
     test_start_activation();
 
+    let new_time = last_tx + (86400 * 7 + 1) + (period - 1);
+
     %{
         stop_prank = start_prank(666, ids.contract_address)
-        stop_warp = warp(123456789 + (86400 - 1), ids.contract_address)
+        stop_warp = warp(ids.new_time - 100, ids.contract_address)
 
         expect_revert(error_message="Will: will is not yet activated")
     %}
