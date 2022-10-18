@@ -1,5 +1,11 @@
 %lang starknet
 
+// 
+// 
+// NOTE: THIS CONTRACT IS CURRENTLY NOT COMPATIBLE. USE THE OTHER ONE!!
+// 
+// 
+
 from starkware.cairo.common.cairo_builtins import HashBuiltin, SignatureBuiltin
 from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.memcpy import memcpy
@@ -10,7 +16,7 @@ from starkware.starknet.common.syscalls import (
     get_contract_address,
     get_block_timestamp,
 )
-from contracts.account.library import (
+from argent_contract_latest.contracts.account.library import (
     Call,
     CallArray,
     Escape,
