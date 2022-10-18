@@ -16,7 +16,7 @@ argent_account_extended = [
 ]
 
 ["protostar.shared_command_configs"]
-cairo-path = ["./lib/cairo_contracts/src", "./lib/argent_contracts_starknet/contracts"]
+cairo-path = ["./lib/cairo_contracts/src", "./lib/"]
 
 ["profile.devnet.protostar.shared_command_configs"]
 gateway-url = "http://localhost:5050"

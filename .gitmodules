@@ -1,6 +1,9 @@
 [submodule "cairo_contracts"]
 	path = lib/cairo_contracts
 	url = https://github.com/OpenZeppelin/cairo-contracts
-[submodule "argent_contracts_starknet"]
-	path = lib/argent_contracts_starknet
+[submodule "argent_contract_latest"]
+	path = lib/argent_contract_latest
+	url = https://github.com/argentlabs/argent-contracts-starknet
+[submodule "argent_contract"]
+	path = lib/argent_contract
 	url = https://github.com/argentlabs/argent-contracts-starknet
