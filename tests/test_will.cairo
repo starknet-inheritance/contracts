@@ -140,7 +140,7 @@ func __setup__{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
             "src/will.cairo",
             {
                 "owner": ids.owner,
-                "activation_period": 86400,
+                "activation_period": 1,
                 "splits" : [
                     {   
                         "beneficiary" :666, 
@@ -390,15 +390,33 @@ func test_claim_split{
 
     let new_time = last_tx + (86400 * 7 + 1) + (period + 1);
 
+    let (_token1) = token1.read();
+    let (owner) = will_owner.read();
+    let (owner_balance_before) = IERC20.balanceOf(contract_address=_token1, account=owner);
+
     %{
-        stop_prank = start_prank(666, ids.contract_address)
+        stop_prank_1 = start_prank(666, ids.contract_address)
         stop_warp = warp(ids.new_time + 1, ids.contract_address)
     %}
 
     Will.claim_split(contract_address=contract_address, id=1);
 
     %{
-        stop_prank()
+        stop_prank_1()
+        stop_prank_2 = start_prank(999, ids.contract_address)
+    %}
+
+    Will.claim_split(contract_address=contract_address, id=2);
+
+    let (owner_balance_after) = IERC20.balanceOf(contract_address=_token1, account=owner);
+    let (claimer_balance) = IERC20.balanceOf(contract_address=_token1, account=666);
+
+    %{
+        print(f"claimer balance : {ids.claimer_balance.low}")
+        print(f"balance owner before : {ids.owner_balance_before.low}")
+        print(f"balance owner after : {ids.owner_balance_after.low}")
+
+        stop_prank_2()
         stop_warp()
     %}
 

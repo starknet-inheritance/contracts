@@ -12,6 +12,10 @@ from openzeppelin.token.erc20.IERC20 import IERC20
 from src.will_governable import WillGovernable, Signature
 from src.will_activable import WillActivable, WillStatusEnum
 
+// 7 days
+const DAY_IN_SECONDS = 86400;
+const OWNER_INACTIVITY_PERIOD = 7 * DAY_IN_SECONDS;
+
 @contract_interface
 namespace ArgentAccountExtended {
     func getLatestTxTimestamp() -> (timestamp: felt) {
@@ -53,21 +57,22 @@ func _is_valid_(address: felt) -> (res: felt) {
 //  CONSTUCTOR
 //
 
-// - duration for activation period must be in seconds e.g. 1 day = 86400 seconds
-// activation period will later be calculated as `current block timestamp + duration)
+// - duration for activation period must be in days (eg 1, 2, 3 days)
 @constructor
 func constructor{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     owner: felt,
     activation_period: felt,
-    splits_len: felt,
-    splits: UninitializedSplit*,
     threshold: felt,
     governors_pk_len: felt,
     governors_pk: felt*,
+    splits_len: felt,
+    splits: UninitializedSplit*,
 ) {
     Ownable.set_owner(owner);
 
-    WillActivable.set_activation_period(activation_period);
+    let activation_period_seconds = activation_period * DAY_IN_SECONDS;
+
+    WillActivable.set_activation_period(activation_period_seconds);
     WillGovernable.initialize(threshold, governors_pk_len, governors_pk);
 
     _total_splits.write(splits_len);
@@ -75,14 +80,6 @@ func constructor{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
 
     return ();
 }
-
-//
-//  EXTERNALS
-//
-
-//
-// TODO: check owner's account contract activity status
-//
 
 @external
 func start_activation{
@@ -95,8 +92,7 @@ func start_activation{
             contract_address=owner
         );
 
-        // 7 days in seconds = 7 * 86400 seconds
-        assert_lt(latest_tx_timestamp, current_timestamp - (7 * 86400));
+        assert_lt(latest_tx_timestamp, current_timestamp - OWNER_INACTIVITY_PERIOD);
     }
 
     WillGovernable.verify_signatures(signatures_len, signatures);
