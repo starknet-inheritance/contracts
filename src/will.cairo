@@ -202,6 +202,19 @@ func get_activation_period{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range
     return (res=timestamp);
 }
 
+@view
+func get_all_splits{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (
+    splits_len: felt, splits: Split*
+) {
+    alloc_locals;
+
+    let (total) = _total_splits.read();
+    let (local splits: Split*) = alloc();
+
+    _get_all_splits(0, total, splits);
+
+    return (splits_len=total, splits=splits);
+}
 //
 //  INTERNALS
 //
@@ -283,4 +296,21 @@ func get_splits_id_of_address{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, ra
     } else {
         return get_splits_id_of_address(splits_count + 1, splits_total, address, found_len, found);
     }
+}
+
+func _get_all_splits{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    splits_count: felt, splits_total: felt, arr: Split*
+) {
+    if (splits_count == splits_total) {
+        return ();
+    }
+
+    let (split) = _splits.read(splits_count + 1);
+
+    assert arr.beneficiary = split.beneficiary;
+    assert arr.token = split.token;
+    assert arr.percentage = split.percentage;
+    assert arr.expected_amount = split.expected_amount;
+
+    return _get_all_splits(splits_count + 1, splits_total, arr + Split.SIZE);
 }

@@ -38,6 +38,9 @@ namespace Will {
 
     func get_activation_period() -> (res: felt) {
     }
+
+    func get_all_splits() -> (splits_len: felt, splits: Split*) {
+    }
 }
 
 @contract_interface
@@ -231,6 +234,25 @@ func test_initialize_will{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_
 
     assert allowance1.high = 100000000;
     assert allowance2.high = 100000000;
+
+    let (splits_len, splits: Split*) = Will.get_all_splits(contract_address=will_address);
+
+    assert split_1.beneficiary = splits[0].beneficiary;
+    assert split_1.token = splits[0].token;
+    assert split_1.percentage = splits[0].percentage;
+    assert split_1.expected_amount.low = splits[0].expected_amount.low;
+
+    assert split_2.beneficiary = splits[1].beneficiary;
+    assert split_2.token = splits[1].token;
+    assert split_2.percentage = splits[1].percentage;
+    assert split_2.expected_amount.low = splits[1].expected_amount.low;
+
+    assert split_3.beneficiary = splits[2].beneficiary;
+    assert split_3.token = splits[2].token;
+    assert split_3.percentage = splits[2].percentage;
+    assert split_3.expected_amount.low = splits[2].expected_amount.low;
+
+    assert splits_len = total_splits;
 
     return ();
 }
