@@ -272,7 +272,10 @@ func test_start_activation{
     // 7 day (+ 1 second) after owner's last transaction time
     let new_time = last_tx + (86400 * 7 + 1);
 
-    %{ stop_warp = warp(ids.new_time, ids.contract_address) %}
+    %{
+        stop_warp = warp(ids.new_time, ids.contract_address) 
+        expect_events({"name": "activation_start" , "from_address": ids.contract_address})
+    %}
 
     Will.start_activation(contract_address=contract_address, signatures_len=2, signatures=sign);
 
@@ -354,7 +357,10 @@ func test_stop_activation{
 
     test_start_activation();
 
-    %{ stop_prank = start_prank(ids.owner, ids.contract_address) %}
+    %{
+        stop_prank = start_prank(ids.owner, ids.contract_address)
+        expect_events({"name": "activation_rejected" , "from_address": ids.contract_address})
+    %}
 
     Will.stop_activation(contract_address);
 
@@ -419,6 +425,7 @@ func test_claim_split{
     %{
         stop_prank_1 = start_prank(666, ids.contract_address)
         stop_warp = warp(ids.new_time + 1, ids.contract_address)
+        expect_events({"name": "split_claimed" , "data": [1], "from_address": ids.contract_address})
     %}
 
     Will.claim_split(contract_address=contract_address, id=1);

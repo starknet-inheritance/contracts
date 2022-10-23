@@ -54,6 +54,22 @@ func _is_valid_(address: felt) -> (res: felt) {
 }
 
 //
+// EVENTS
+//
+
+@event
+func activation_start(timestamp: felt) {
+}
+
+@event
+func activation_rejected(timestamp: felt) {
+}
+
+@event
+func split_claimed(id: felt) {
+}
+
+//
 //  CONSTUCTOR
 //
 
@@ -85,9 +101,11 @@ func constructor{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
 func start_activation{
     syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr, ec_op_ptr: EcOpBuiltin*
 }(signatures_len: felt, signatures: Signature*) {
+    alloc_locals;
+    let (local current_timestamp) = get_block_timestamp();
+
     with_attr error_message("Will: owner must be inactive for 7 days to activate") {
         let (owner) = Ownable.get_owner();
-        let (current_timestamp) = get_block_timestamp();
         let (latest_tx_timestamp) = ArgentAccountExtended.getLatestTxTimestamp(
             contract_address=owner
         );
@@ -101,13 +119,21 @@ func start_activation{
     let (total_splits) = _total_splits.read();
     calculate_splits_amount(total_splits);
 
+    activation_start.emit(timestamp=current_timestamp);
+
     return ();
 }
 
 @external
 func stop_activation{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
+    alloc_locals;
+    let (local timestamp) = get_block_timestamp();
+
     Ownable.only_owner();
     WillActivable.stop_activation();
+
+    activation_rejected.emit(timestamp=timestamp);
+
     return ();
 }
 
@@ -148,6 +174,8 @@ func claim_split{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
     );
 
     _is_claimed.write(id, TRUE);
+
+    split_claimed.emit(id=id);
 
     return ();
 }
