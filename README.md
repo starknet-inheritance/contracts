@@ -1,3 +1,14 @@
+## WILL CONTRACT
+
+**Class hash (Goerli) :**
+
+```
+0x033c659753a854d8d5a8ab4bea6513e99430475311e52e9174ae497397ff0d40
+```
+View on [StarkScan](https://testnet.starkscan.co/class/0x033c659753a854d8d5a8ab4bea6513e99430475311e52e9174ae497397ff0d40#code)
+
+## ACCOUNT CONTRACT
+
 Because the Will contract needs to check for an account's activity status, as such the current implementation expects a Will's owner account to provide a way to query the timestamp of the latest transaction executed from that account contract.
 
 The implementation of the account contract which satisfies such requirement is modified from [v0.9.0 Cairo of Argent's account contract](https://github.com/argentlabs/argent-contracts-starknet/tree/cairo/v0.9.0) and can be used by upgrading your account to the provided class hash below.
