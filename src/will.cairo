@@ -282,13 +282,6 @@ func calculate_splits_amount{
 
     let (balance: Uint256) = IERC20.balanceOf(contract_address=split.token, account=owner);
 
-    // issue : next split of the same token will calculate its percentage
-    // based on `balance - amount`, which will result in wrong amount (less that expected).
-    //
-    // as of now, the div remainder should just be ignored to make things easier
-    //
-    // amount == balance * (split.percentage/100) == (balance * split.percentage) / 100
-    //
     let (nom, _) = uint256_mul(balance, Uint256(split.percentage, 0));
     let (amount, _) = uint256_unsigned_div_rem(nom, Uint256(100, 0));
 
