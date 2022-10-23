@@ -1,13 +1,35 @@
-## WILL CONTRACT
+## WILL FACTORY CONTRACT
+
+**Contract hash (Goerli) :**
+
+```
+0x419d6a47ce30eb2b3657d90341c76b0a68455be1921988ea357c933d1addfd2
+```
+
+View on [StarkScan](https://testnet.starkscan.co/contract/0x01f51fca15fe380093c6cb81146767cbc2e109e1c9e20940bf9ba7fb9d4e38b0#overview) ↗️
+
+_`constructor_calldata` in `create_will()` should be arranged like below but as an array of `felt` instead :_
+
+```
+activation_period: felt,
+threshold: felt,
+governors_pk_len: felt,
+governors_pk: felt*,
+splits_len: felt,
+splits: UninitializedSplit*,
+```
+
+## WILL CLASS
 
 **Class hash (Goerli) :**
 
 ```
-0x033c659753a854d8d5a8ab4bea6513e99430475311e52e9174ae497397ff0d40
+0x419d6a47ce30eb2b3657d90341c76b0a68455be1921988ea357c933d1addfd2
 ```
-View on [StarkScan](https://testnet.starkscan.co/class/0x033c659753a854d8d5a8ab4bea6513e99430475311e52e9174ae497397ff0d40#code)
 
-## ACCOUNT CONTRACT
+View on [StarkScan](https://testnet.starkscan.co/class/0x419d6a47ce30eb2b3657d90341c76b0a68455be1921988ea357c933d1addfd2#overview) ↗️
+
+## ACCOUNT CLASS
 
 Because the Will contract needs to check for an account's activity status, as such the current implementation expects a Will's owner account to provide a way to query the timestamp of the latest transaction executed from that account contract.
 
@@ -18,4 +40,5 @@ The implementation of the account contract which satisfies such requirement is m
 ```
 0x03c3c2d163db7e855e3fb025ea58e86660a7ba16c8a8b528608af5e5138597d0
 ```
+
 View on [StarkScan](https://testnet.starkscan.co/class/0x03c3c2d163db7e855e3fb025ea58e86660a7ba16c8a8b528608af5e5138597d0#overview) ↗️
