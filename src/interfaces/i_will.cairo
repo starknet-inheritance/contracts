@@ -58,4 +58,8 @@ namespace IWill {
     // Returns the time it takes for the activation period to end after it has been started
     func get_activation_period() -> (res: felt) {
     }
+
+    // Returns the details of all splits
+    func get_all_splits() -> (splits_len: felt, splits: Split*) {
+    }
 }
