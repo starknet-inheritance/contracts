@@ -1,9 +1,9 @@
 ## WILL FACTORY CONTRACT
 
-**Contract hash (Goerli) :**
+**Contract address (Goerli) :**
 
 ```
-0x419d6a47ce30eb2b3657d90341c76b0a68455be1921988ea357c933d1addfd2
+0x01f51fca15fe380093c6cb81146767cbc2e109e1c9e20940bf9ba7fb9d4e38b0
 ```
 
 View on [StarkScan](https://testnet.starkscan.co/contract/0x01f51fca15fe380093c6cb81146767cbc2e109e1c9e20940bf9ba7fb9d4e38b0#overview) ↗️
