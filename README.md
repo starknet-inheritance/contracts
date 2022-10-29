@@ -42,3 +42,11 @@ The implementation of the [account contract](https://github.com/starknet-inherit
 ```
 
 View on [StarkScan](https://testnet.starkscan.co/class/0x03c3c2d163db7e855e3fb025ea58e86660a7ba16c8a8b528608af5e5138597d0#overview) ↗️
+
+
+---
+
+## Updates:
+
+#1 Contract created
+https://testnet.starkscan.co/contract/0x01ad0df75c076e5433f1ee9b336634d201f651c15c583a0b50ce15ebbd9e13b9#read-contract
