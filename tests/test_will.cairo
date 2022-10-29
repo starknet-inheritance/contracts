@@ -143,7 +143,6 @@ func __setup__{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
             "src/will.cairo",
             {
                 "owner": ids.owner,
-                "activation_period": 1,
                 "splits" : [
                     {   
                         "beneficiary" :666, 
@@ -211,7 +210,7 @@ func test_initialize_will{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_
     );
 
     assert total_splits = 3;
-    assert activation_period = 86400;
+    assert activation_period = 5;
 
     assert split_1.beneficiary = 666;
     assert split_1.token = _token1;
@@ -269,8 +268,8 @@ func test_start_activation{
     assert sign[0] = Signature(0x2b94ea0156794006a62fe1bda19e6c32083499d8d13c3a605abc1a5288d6dfe, 0x37116782c568c5cc7a5da13425395a8a17c0ca6babd0b3970637bb7c1113a9f);
     assert sign[1] = Signature(0x64df89530d2cb4a2377c6cff689da1dd54b72d325be44a3ef814f179aa34bde, 0x4c3deeae07ad308b84722340e9878460350c12b517c0087953ae8fe7bfcf6d5);
 
-    // 7 day (+ 1 second) after owner's last transaction time
-    let new_time = last_tx + (86400 * 7 + 1);
+    // 1min + 1sec after owner's last transaction time
+    let new_time = last_tx + (60 * 1 + 1);
 
     %{
         stop_warp = warp(ids.new_time, ids.contract_address) 
@@ -300,12 +299,12 @@ func test_fail_start_activation_owner_not_inactive{
     assert sign[0] = Signature(0x2b94ea0156794006a62fe1bda19e6c32083499d8d13c3a605abc1a5288d6dfe, 0x37116782c568c5cc7a5da13425395a8a17c0ca6babd0b3970637bb7c1113a9f);
     assert sign[1] = Signature(0x64df89530d2cb4a2377c6cff689da1dd54b72d325be44a3ef814f179aa34bde, 0x4c3deeae07ad308b84722340e9878460350c12b517c0087953ae8fe7bfcf6d5);
 
-    // 2 days after owner's last tx happened
-    let new_time = last_tx + (86400 * 2);
+    // 30secs after owner's last tx happened
+    let new_time = last_tx + (30);
 
     %{
         stop_warp = warp(ids.new_time, ids.contract_address) 
-        expect_revert(error_message="Will: owner must be inactive for 7 days to activate")
+        expect_revert(error_message="Will: owner must be inactive for 1min to activate")
     %}
 
     Will.start_activation(contract_address=contract_address, signatures_len=2, signatures=sign);

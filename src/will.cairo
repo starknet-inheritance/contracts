@@ -13,8 +13,8 @@ from src.will_governable import WillGovernable, Signature
 from src.will_activable import WillActivable, WillStatusEnum
 
 // 7 days
-const DAY_IN_SECONDS = 86400;
-const OWNER_INACTIVITY_PERIOD = 7 * DAY_IN_SECONDS;
+// const DAY_IN_SECONDS = 86400;
+// const OWNER_INACTIVITY_PERIOD = 7 * DAY_IN_SECONDS;
 
 @contract_interface
 namespace ArgentAccountExtended {
@@ -77,7 +77,6 @@ func split_claimed(id: felt) {
 @constructor
 func constructor{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     owner: felt,
-    activation_period: felt,
     threshold: felt,
     governors_pk_len: felt,
     governors_pk: felt*,
@@ -86,7 +85,10 @@ func constructor{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
 ) {
     Ownable.set_owner(owner);
 
-    let activation_period_seconds = activation_period * DAY_IN_SECONDS;
+    // for demo purposes only,
+    // activation period will last only 5seconds
+    // after 5sec, splits becomes claimable
+    let activation_period_seconds = 5;
 
     WillActivable.set_activation_period(activation_period_seconds);
     WillGovernable.initialize(threshold, governors_pk_len, governors_pk);
@@ -104,13 +106,15 @@ func start_activation{
     alloc_locals;
     let (local current_timestamp) = get_block_timestamp();
 
-    with_attr error_message("Will: owner must be inactive for 7 days to activate") {
+    // for demo purposes
+    with_attr error_message("Will: owner must be inactive for 1min to activate") {
         let (owner) = Ownable.get_owner();
         let (latest_tx_timestamp) = ArgentAccountExtended.getLatestTxTimestamp(
             contract_address=owner
         );
 
-        assert_lt(latest_tx_timestamp, current_timestamp - OWNER_INACTIVITY_PERIOD);
+        // true if already past 1mins since the last tx by owner
+        assert_lt(latest_tx_timestamp, current_timestamp - (60 * 1));
     }
 
     WillGovernable.verify_signatures(signatures_len, signatures);
