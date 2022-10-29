@@ -19,6 +19,16 @@ splits_len: felt,
 splits: UninitializedSplit*,
 ```
 
+**Demo Contract (Goerli) :**
+
+```
+0x060a5f862297e5fdb77223d5a79a814ea593d4987863f3b02f1920d2f5e04b4b
+```
+
+View on [StarkScan](https://testnet.starkscan.co/contract/0x060a5f862297e5fdb77223d5a79a814ea593d4987863f3b02f1920d2f5e04b4b#overview) ↗️
+
+_Same calldata but without the `activation_period` as it is already hardcoded in the contract._
+
 ## WILL CLASS
 
 **Class hash (Goerli) :**
@@ -28,6 +38,14 @@ splits: UninitializedSplit*,
 ```
 
 View on [StarkScan](https://testnet.starkscan.co/class/0x419d6a47ce30eb2b3657d90341c76b0a68455be1921988ea357c933d1addfd2#overview) ↗️
+
+**Demo Class Hash (Goerli) :**
+
+```
+0x02f1ea6630f44e1c054d3ed8fc2f2f678d8be38ba40833d35cd980eb71841d86
+```
+
+View on [StarkScan](https://testnet.starkscan.co/class/0x02f1ea6630f44e1c054d3ed8fc2f2f678d8be38ba40833d35cd980eb71841d86#overview) ↗️
 
 ## ACCOUNT CLASS
 
@@ -42,7 +60,6 @@ The implementation of the [account contract](https://github.com/starknet-inherit
 ```
 
 View on [StarkScan](https://testnet.starkscan.co/class/0x03c3c2d163db7e855e3fb025ea58e86660a7ba16c8a8b528608af5e5138597d0#overview) ↗️
-
 
 ---
 
