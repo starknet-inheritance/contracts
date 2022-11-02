@@ -11,6 +11,7 @@ View on [StarkScan](https://testnet.starkscan.co/contract/0x01f51fca15fe380093c6
 _`constructor_calldata` in `create_will()` should be arranged like below but as an array of `felt` instead :_
 
 ```
+owner: felt,
 activation_period: felt,
 threshold: felt,
 governors_pk_len: felt,
@@ -22,10 +23,10 @@ splits: UninitializedSplit*,
 **Demo Contract (Goerli) :**
 
 ```
-0x060a5f862297e5fdb77223d5a79a814ea593d4987863f3b02f1920d2f5e04b4b
+0x05131a9a5dd8f44505f8ce8760b8f076b5732cec3accdee5f17dbf70a300f1bf
 ```
 
-View on [StarkScan](https://testnet.starkscan.co/contract/0x060a5f862297e5fdb77223d5a79a814ea593d4987863f3b02f1920d2f5e04b4b#overview) ↗️
+View on [StarkScan](https://testnet.starkscan.co/contract/0x05131a9a5dd8f44505f8ce8760b8f076b5732cec3accdee5f17dbf70a300f1bf#overview) ↗️
 
 _Same calldata but without the `activation_period` as it is already hardcoded in the contract._
 
@@ -42,10 +43,10 @@ View on [StarkScan](https://testnet.starkscan.co/class/0x419d6a47ce30eb2b3657d90
 **Demo Class Hash (Goerli) :**
 
 ```
-0x02f1ea6630f44e1c054d3ed8fc2f2f678d8be38ba40833d35cd980eb71841d86
+0x06054dac328c26e8655fc8a1a86946c5156bab6b234ff347fc5b38bc8b6dae1d
 ```
 
-View on [StarkScan](https://testnet.starkscan.co/class/0x02f1ea6630f44e1c054d3ed8fc2f2f678d8be38ba40833d35cd980eb71841d86#overview) ↗️
+View on [StarkScan](https://testnet.starkscan.co/class/0x06054dac328c26e8655fc8a1a86946c5156bab6b234ff347fc5b38bc8b6dae1d#overview) ↗️
 
 ## ACCOUNT CLASS
 

@@ -29,7 +29,7 @@ func will_class_hash() -> (res: felt) {
 //
 
 @event
-func will_creation(will_contract_address: felt, owner: felt) {
+func will_creation(will_contract_address: felt, owner: felt, will_implementation: felt) {
 }
 
 //
@@ -68,9 +68,20 @@ func create_will{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
 
     salt.write(current_salt + 1);
 
-    will_creation.emit(will_contract_address=contract_address, owner=caller);
+    will_creation.emit(
+        will_contract_address=contract_address, owner=caller, will_implementation=class_hash
+    );
 
     return (will_contract_address=contract_address);
+}
+
+// For demo purposes only
+@external
+func set_will_class{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    class_hash: felt
+) {
+    will_class_hash.write(class_hash);
+    return ();
 }
 
 //

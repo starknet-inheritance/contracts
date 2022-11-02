@@ -3,7 +3,7 @@
 from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.bool import TRUE, FALSE
 from starkware.cairo.common.cairo_builtins import HashBuiltin, EcOpBuiltin
-from starkware.cairo.common.math import assert_le, assert_not_zero, assert_lt
+from starkware.cairo.common.math import assert_le, assert_not_zero
 from starkware.starknet.common.syscalls import get_caller_address, get_block_timestamp
 from starkware.cairo.common.uint256 import Uint256, uint256_unsigned_div_rem, uint256_mul
 
@@ -87,7 +87,9 @@ func constructor{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
 
     // for demo purposes only,
     // activation period will last only 5seconds
-    // after 5sec, splits becomes claimable
+    //
+    // after 5sec, splits becomes claimable and owner is
+    // no longer allowed to stop the activation (if owner still alive)
     let activation_period_seconds = 5;
 
     WillActivable.set_activation_period(activation_period_seconds);
@@ -106,16 +108,17 @@ func start_activation{
     alloc_locals;
     let (local current_timestamp) = get_block_timestamp();
 
-    // for demo purposes
-    with_attr error_message("Will: owner must be inactive for 1min to activate") {
-        let (owner) = Ownable.get_owner();
-        let (latest_tx_timestamp) = ArgentAccountExtended.getLatestTxTimestamp(
-            contract_address=owner
-        );
+    // the check for inactivity is removed for demo purposes
+    //
+    // with_attr error_message("Will: owner must be inactive for 1min to activate") {
+    //     let (owner) = Ownable.get_owner();
+    //     let (latest_tx_timestamp) = ArgentAccountExtended.getLatestTxTimestamp(
+    //         contract_address=owner
+    //     );
 
-        // true if already past 1mins since the last tx by owner
-        assert_lt(latest_tx_timestamp, current_timestamp - (60 * 1));
-    }
+    // // true if already past 1mins since the last tx by owner
+    //     assert_le(latest_tx_timestamp, current_timestamp - (60 * 1));
+    // }
 
     WillGovernable.verify_signatures(signatures_len, signatures);
     WillActivable.start_activation();
